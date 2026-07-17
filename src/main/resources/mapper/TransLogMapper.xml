@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.finreport.module.business.mapper.TransLogMapper">
+
+    <select id="selectById" resultType="org.example.finreport.module.business.entity.TransLog">
+        SELECT * FROM trans_log WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultType="org.example.finreport.module.business.entity.TransLog">
+        SELECT * FROM trans_log
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO trans_log (trans_no, account_no, customer_no, trans_type, amount, fee, channel, status, trans_time, description, created_at)
+        VALUES (#{transNo}, #{accountNo}, #{customerNo}, #{transType}, #{amount}, #{fee}, #{channel}, #{status}, #{transTime}, #{description}, NOW())
+    </insert>
+
+    <update id="updateById">
+        UPDATE trans_log
+        <set>
+            <if test="transNo != null">trans_no = #{transNo},</if>
+            <if test="accountNo != null">account_no = #{accountNo},</if>
+            <if test="customerNo != null">customer_no = #{customerNo},</if>
+            <if test="transType != null">trans_type = #{transType},</if>
+            <if test="amount != null">amount = #{amount},</if>
+            <if test="fee != null">fee = #{fee},</if>
+            <if test="channel != null">channel = #{channel},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="transTime != null">trans_time = #{transTime},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM trans_log WHERE id = #{id}
+    </delete>
+
+    <select id="selectPage" resultType="org.example.finreport.module.business.entity.TransLog">
+        SELECT * FROM trans_log
+        <where>
+            <if test="transType != null and transType != ''">AND trans_type = #{transType}</if>
+            <if test="channel != null and channel != ''">AND channel = #{channel}</if>
+            <if test="dateFrom != null">AND trans_time &gt;= #{dateFrom}</if>
+            <if test="dateTo != null">AND trans_time &lt; #{dateTo}</if>
+            <if test="customerNo != null and customerNo != ''">AND customer_no = #{customerNo}</if>
+            <if test="accountNo != null and accountNo != ''">AND account_no LIKE CONCAT('%',#{accountNo},'%')</if>
+        </where>
+        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM trans_log
+        <where>
+            <if test="transType != null and transType != ''">AND trans_type = #{transType}</if>
+            <if test="channel != null and channel != ''">AND channel = #{channel}</if>
+            <if test="dateFrom != null">AND trans_time &gt;= #{dateFrom}</if>
+            <if test="dateTo != null">AND trans_time &lt; #{dateTo}</if>
+            <if test="customerNo != null and customerNo != ''">AND customer_no = #{customerNo}</if>
+            <if test="accountNo != null and accountNo != ''">AND account_no LIKE CONCAT('%',#{accountNo},'%')</if>
+        </where>
+    </select>
+
+</mapper>

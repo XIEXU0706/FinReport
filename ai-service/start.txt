@@ -1,0 +1,11 @@
+# 启动后端：
+cd backend
+# 激活环境 (Windows 端)
+.\.venv\Scripts\Activate
+# 启动 FastAPI 服务
+uvicorn app.main:app --port 9096 --reload
+
+
+# 启动前端
+cd frontend
+npm run serve

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.finreport.module.business.mapper.LoanRecordMapper">
+
+    <select id="selectById" resultType="org.example.finreport.module.business.entity.LoanRecord">
+        SELECT * FROM loan_record WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultType="org.example.finreport.module.business.entity.LoanRecord">
+        SELECT * FROM loan_record
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO loan_record (loan_no, customer_no, amount, term_months, interest_rate, loan_date, due_date, repay_method, maturity_interest, maturity_total, repay_date, status, created_at, updated_at)
+        VALUES (#{loanNo}, #{customerNo}, #{amount}, #{termMonths}, #{interestRate}, #{loanDate}, #{dueDate}, #{repayMethod}, #{maturityInterest}, #{maturityTotal}, #{repayDate}, #{status}, NOW(), NOW())
+    </insert>
+
+    <update id="updateById">
+        UPDATE loan_record
+        <set>
+            <if test="loanNo != null">loan_no = #{loanNo},</if>
+            <if test="customerNo != null">customer_no = #{customerNo},</if>
+            <if test="amount != null">amount = #{amount},</if>
+            <if test="termMonths != null">term_months = #{termMonths},</if>
+            <if test="interestRate != null">interest_rate = #{interestRate},</if>
+            <if test="loanDate != null">loan_date = #{loanDate},</if>
+            <if test="dueDate != null">due_date = #{dueDate},</if>
+            <if test="repayMethod != null">repay_method = #{repayMethod},</if>
+            <if test="maturityInterest != null">maturity_interest = #{maturityInterest},</if>
+            <if test="maturityTotal != null">maturity_total = #{maturityTotal},</if>
+            <if test="repayDate != null">repay_date = #{repayDate},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM loan_record WHERE id = #{id}
+    </delete>
+
+    <select id="selectPage" resultType="org.example.finreport.module.business.entity.LoanRecord">
+        SELECT * FROM loan_record
+        <where>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+            <if test="dateFrom != null">AND loan_date &gt;= #{dateFrom}</if>
+            <if test="dateTo != null">AND loan_date &lt; #{dateTo}</if>
+            <if test="loanNo != null and loanNo != ''">AND loan_no LIKE CONCAT('%',#{loanNo},'%')</if>
+            <if test="customerNo != null and customerNo != ''">AND customer_no = #{customerNo}</if>
+            <if test="repayMethod != null and repayMethod != ''">AND repay_method = #{repayMethod}</if>
+        </where>
+        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM loan_record
+        <where>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+            <if test="dateFrom != null">AND loan_date &gt;= #{dateFrom}</if>
+            <if test="dateTo != null">AND loan_date &lt; #{dateTo}</if>
+            <if test="loanNo != null and loanNo != ''">AND loan_no LIKE CONCAT('%',#{loanNo},'%')</if>
+            <if test="customerNo != null and customerNo != ''">AND customer_no = #{customerNo}</if>
+            <if test="repayMethod != null and repayMethod != ''">AND repay_method = #{repayMethod}</if>
+        </where>
+    </select>
+
+    <select id="selectMaxLoanNo" resultType="string">
+        SELECT loan_no FROM loan_record ORDER BY id DESC LIMIT 1
+    </select>
+
+</mapper>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.finreport.module.business.mapper.AccountMapper">
+
+    <select id="selectById" resultType="org.example.finreport.module.business.entity.Account">
+        SELECT * FROM account WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultType="org.example.finreport.module.business.entity.Account">
+        SELECT * FROM account
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO account (account_no, customer_no, account_type, currency, balance, status, created_at)
+        VALUES (#{accountNo}, #{customerNo}, #{accountType}, #{currency}, #{balance}, #{status}, NOW())
+    </insert>
+
+    <update id="updateById">
+        UPDATE account
+        <set>
+            <if test="accountNo != null">account_no = #{accountNo},</if>
+            <if test="customerNo != null">customer_no = #{customerNo},</if>
+            <if test="accountType != null">account_type = #{accountType},</if>
+            <if test="currency != null">currency = #{currency},</if>
+            <if test="balance != null">balance = #{balance},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM account WHERE id = #{id}
+    </delete>
+
+    <select id="selectPage" resultType="org.example.finreport.module.business.entity.Account">
+        SELECT * FROM account
+        <where>
+            <if test="accountNo != null and accountNo != ''">AND account_no LIKE CONCAT('%',#{accountNo},'%')</if>
+            <if test="customerNo != null and customerNo != ''">AND customer_no = #{customerNo}</if>
+            <if test="accountType != null and accountType != ''">AND account_type = #{accountType}</if>
+            <if test="currency != null and currency != ''">AND currency = #{currency}</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM account
+        <where>
+            <if test="accountNo != null and accountNo != ''">AND account_no LIKE CONCAT('%',#{accountNo},'%')</if>
+            <if test="customerNo != null and customerNo != ''">AND customer_no = #{customerNo}</if>
+            <if test="accountType != null and accountType != ''">AND account_type = #{accountType}</if>
+            <if test="currency != null and currency != ''">AND currency = #{currency}</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+    </select>
+
+    <select id="selectMaxAccountNo" resultType="long">
+        SELECT MAX(CAST(SUBSTRING(account_no, 2) AS UNSIGNED)) FROM account
+    </select>
+
+</mapper>

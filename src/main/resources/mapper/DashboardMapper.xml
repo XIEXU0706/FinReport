@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.finreport.module.dashboard.mapper.DashboardMapper">
+
+    <select id="selectSummary" resultType="org.example.finreport.module.dashboard.vo.DashboardSummaryVO">
+        SELECT
+        -- 今日交易总额（使用范围查询）
+        COALESCE(SUM(CASE
+        WHEN trans_time >= CURDATE()
+        AND trans_time &lt; DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+        THEN amount END), 0) AS todayTradeAmount,
+
+        -- 昨日交易总额
+        COALESCE(SUM(CASE
+        WHEN trans_time >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+        AND trans_time &lt; CURDATE()
+        THEN amount END), 0) AS yesterdayTradeAmount,
+
+        -- 今日贷款总额
+        COALESCE((SELECT SUM(amount)
+        FROM loan_record
+        WHERE loan_date >= CURDATE()
+        AND loan_date &lt; DATE_ADD(CURDATE(), INTERVAL 1 DAY)), 0) AS todayLoanAmount,
+
+        -- 昨日贷款总额
+        COALESCE((SELECT SUM(amount)
+        FROM loan_record
+        WHERE loan_date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+        AND loan_date &lt; CURDATE()), 0) AS yesterdayLoanAmount,
+
+        -- 今日新增客户
+        (SELECT COUNT(*)
+        FROM customer
+        WHERE open_date >= CURDATE()
+        AND open_date &lt; DATE_ADD(CURDATE(), INTERVAL 1 DAY)) AS todayNewCustomers,
+
+        -- 昨日新增客户
+        (SELECT COUNT(*)
+        FROM customer
+        WHERE open_date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+        AND open_date &lt; CURDATE()) AS yesterdayNewCustomers,
+
+        -- 今日还款总额
+        COALESCE(SUM(CASE
+        WHEN trans_time >= CURDATE()
+        AND trans_time &lt;  DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+        AND trans_type = 'REPAYMENT'
+        THEN amount END), 0) AS todayRepaymentAmount,
+
+        -- 昨日还款总额
+        COALESCE(SUM(CASE
+        WHEN trans_time >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+        AND trans_time &lt; CURDATE()
+        AND trans_type = 'REPAYMENT'
+        THEN amount END), 0) AS yesterdayRepaymentAmount
+
+        FROM trans_log
+        WHERE trans_time >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)  -- 只需扫描昨天+今天
+        AND trans_time &lt; DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+    </select>
+
+    <select id="selectTopBranches"
+            resultType="org.example.finreport.module.dashboard.vo.TopBranchVO">
+        SELECT b.branch_name AS branchName, COALESCE(SUM(tl.amount),0) AS tradeAmount
+        FROM branch b LEFT JOIN customer c ON b.id = c.branch_id
+        LEFT JOIN trans_log tl ON c.customer_no = tl.customer_no AND tl.status = 'SUCCESS'
+        GROUP BY b.id, b.branch_name ORDER BY tradeAmount DESC LIMIT #{limit}
+    </select>
+
+    <select id="selectProfitTrend"
+            resultType="org.example.finreport.module.dashboard.vo.ProfitTrendVO">
+        SELECT `month`, COALESCE(SUM(amount), 0) AS profit
+        FROM (
+            SELECT DATE_FORMAT(trans_time, '%Y-%m') AS `month`, fee AS amount
+            FROM trans_log
+            WHERE trans_time >= DATE_SUB(CURDATE(), INTERVAL #{months} MONTH) AND status = 'SUCCESS'
+            UNION ALL
+            SELECT DATE_FORMAT(loan_date, '%Y-%m') AS `month`, maturity_interest AS amount
+            FROM loan_record
+            WHERE loan_date >= DATE_SUB(CURDATE(), INTERVAL #{months} MONTH)
+        ) t
+        GROUP BY `month` ORDER BY `month`
+    </select>
+
+    <select id="selectRiskAlerts"
+            resultType="org.example.finreport.module.dashboard.vo.RiskAlertVO">
+        SELECT '贷款逾期率' AS name,
+               ROUND(overdue.c * 100.0 / NULLIF(total.c, 0), 1) AS rate,
+               CONCAT('贷款逾期率 ', ROUND(overdue.c * 100.0 / NULLIF(total.c, 0), 1), '%') AS content,
+               CASE WHEN ROUND(overdue.c * 100.0 / NULLIF(total.c, 0), 1) > 5 THEN 'HIGH'
+                    WHEN ROUND(overdue.c * 100.0 / NULLIF(total.c, 0), 1) > 2 THEN 'MEDIUM'
+                    ELSE 'LOW' END AS level
+        FROM (SELECT COUNT(*) AS c FROM loan_record WHERE status = 'OVERDUE') overdue
+        CROSS JOIN (SELECT COUNT(*) AS c FROM loan_record WHERE status IN ('NORMAL','OVERDUE')) total
+        UNION ALL
+        SELECT '贷款不良率' AS name,
+               ROUND(bad.c * 100.0 / NULLIF(all_l.c, 0), 1) AS rate,
+               CONCAT('贷款不良率 ', ROUND(bad.c * 100.0 / NULLIF(all_l.c, 0), 1), '%') AS content,
+               CASE WHEN ROUND(bad.c * 100.0 / NULLIF(all_l.c, 0), 1) > 3 THEN 'HIGH'
+                    WHEN ROUND(bad.c * 100.0 / NULLIF(all_l.c, 0), 1) > 1 THEN 'MEDIUM'
+                    ELSE 'LOW' END AS level
+        FROM (SELECT COUNT(*) AS c FROM loan_record WHERE status = 'BAD') bad
+        CROSS JOIN (SELECT COUNT(*) AS c FROM loan_record) all_l
+        UNION ALL
+        SELECT '大额交易占比' AS name,
+               ROUND(large.c * 100.0 / NULLIF(total_t.c, 0), 1) AS rate,
+               CONCAT('大额交易占比 ', ROUND(large.c * 100.0 / NULLIF(total_t.c, 0), 1), '%') AS content,
+               CASE WHEN ROUND(large.c * 100.0 / NULLIF(total_t.c, 0), 1) > 10 THEN 'HIGH'
+                    WHEN ROUND(large.c * 100.0 / NULLIF(total_t.c, 0), 1) > 5 THEN 'MEDIUM'
+                    ELSE 'LOW' END AS level
+        FROM (SELECT COUNT(*) AS c FROM trans_log WHERE amount > 100000 AND status = 'SUCCESS') large
+        CROSS JOIN (SELECT COUNT(*) AS c FROM trans_log WHERE status = 'SUCCESS') total_t
+        UNION ALL
+        SELECT '交易失败率' AS name,
+               ROUND(fail.c * 100.0 / NULLIF(all_t.c, 0), 1) AS rate,
+               CONCAT('交易失败率 ', ROUND(fail.c * 100.0 / NULLIF(all_t.c, 0), 1), '%') AS content,
+               CASE WHEN ROUND(fail.c * 100.0 / NULLIF(all_t.c, 0), 1) > 5 THEN 'HIGH'
+                    WHEN ROUND(fail.c * 100.0 / NULLIF(all_t.c, 0), 1) > 1 THEN 'MEDIUM'
+                    ELSE 'LOW' END AS level
+        FROM (SELECT COUNT(*) AS c FROM trans_log WHERE status != 'SUCCESS') fail
+        CROSS JOIN (SELECT COUNT(*) AS c FROM trans_log) all_t
+        LIMIT #{limit}
+    </select>
+
+</mapper>

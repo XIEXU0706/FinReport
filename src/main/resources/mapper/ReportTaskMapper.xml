@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.finreport.module.report.mapper.ReportTaskMapper">
+
+    <select id="selectById" resultType="org.example.finreport.module.report.entity.ReportTask">
+        SELECT * FROM report_task WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultType="org.example.finreport.module.report.entity.ReportTask">
+        SELECT * FROM report_task ORDER BY id DESC
+    </select>
+
+    <select id="selectEnabledList" resultType="org.example.finreport.module.report.entity.ReportTask">
+        SELECT * FROM report_task WHERE enabled = 1 ORDER BY id DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO report_task (task_name, report_type, cron_expression, enabled, created_at, updated_at)
+        VALUES (#{taskName}, #{reportType}, #{cronExpression}, #{enabled}, NOW(), NOW())
+    </insert>
+
+    <update id="updateById">
+        UPDATE report_task
+        <set>
+            <if test="taskName != null">task_name = #{taskName},</if>
+            <if test="reportType != null">report_type = #{reportType},</if>
+            <if test="cronExpression != null">cron_expression = #{cronExpression},</if>
+            <if test="enabled != null">enabled = #{enabled},</if>
+            <if test="lastRunTime != null">last_run_time = #{lastRunTime},</if>
+            <if test="lastStatus != null">last_status = #{lastStatus},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM report_task WHERE id = #{id}
+    </delete>
+
+    <select id="selectPage" resultType="org.example.finreport.module.report.entity.ReportTask">
+        SELECT * FROM report_task
+        <where>
+            <if test="taskName != null and taskName != ''">AND task_name LIKE CONCAT('%',#{taskName},'%')</if>
+            <if test="reportType != null and reportType != ''">AND report_type = #{reportType}</if>
+        </where>
+        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM report_task
+        <where>
+            <if test="taskName != null and taskName != ''">AND task_name LIKE CONCAT('%',#{taskName},'%')</if>
+            <if test="reportType != null and reportType != ''">AND report_type = #{reportType}</if>
+        </where>
+    </select>
+
+</mapper>

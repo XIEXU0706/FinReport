@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.finreport.module.report.mapper.ReportMapper">
+
+    <select id="selectById" resultType="org.example.finreport.module.report.entity.Report">
+        SELECT * FROM report WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultType="org.example.finreport.module.report.entity.Report">
+        SELECT * FROM report
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO report (title, report_type, status, template_id, period_start, period_end, generated_by, generated_time, approved_by, approved_time, file_url, description, created_at)
+        VALUES (#{title}, #{reportType}, #{status}, #{templateId}, #{periodStart}, #{periodEnd}, #{generatedBy}, #{generatedTime}, #{approvedBy}, #{approvedTime}, #{fileUrl}, #{description}, NOW())
+    </insert>
+
+    <update id="updateById">
+        UPDATE report
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="reportType != null">report_type = #{reportType},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="templateId != null">template_id = #{templateId},</if>
+            <if test="periodStart != null">period_start = #{periodStart},</if>
+            <if test="periodEnd != null">period_end = #{periodEnd},</if>
+            <if test="generatedBy != null">generated_by = #{generatedBy},</if>
+            <if test="generatedTime != null">generated_time = #{generatedTime},</if>
+            <if test="approvedBy != null">approved_by = #{approvedBy},</if>
+            <if test="approvedTime != null">approved_time = #{approvedTime},</if>
+            <if test="fileUrl != null">file_url = #{fileUrl},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM report WHERE id = #{id}
+    </delete>
+
+    <select id="selectPage" resultType="org.example.finreport.module.report.entity.Report">
+        SELECT * FROM report
+        <where>
+            <if test="title != null and title != ''">AND title LIKE CONCAT('%',#{title},'%')</if>
+            <if test="reportType != null and reportType != ''">AND report_type = #{reportType}</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM report
+        <where>
+            <if test="title != null and title != ''">AND title LIKE CONCAT('%',#{title},'%')</if>
+            <if test="reportType != null and reportType != ''">AND report_type = #{reportType}</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+    </select>
+
+    <select id="selectListByType" resultType="org.example.finreport.module.report.entity.Report">
+        SELECT * FROM report
+        <where>
+            <if test="reportType != null and reportType != ''">AND report_type = #{reportType}</if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>

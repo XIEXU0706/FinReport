@@ -1,0 +1,54 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Frontend ###
+frontend/node_modules/
+frontend/dist/
+
+### npm cache ###
+.npm-cache/
+
+### Python AI Service ###
+ai-service/**/__pycache__/
+*.pyc
+*.pyo
+ai-service/backend/.venv/
+ai-service/backend/.env
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Local Credentials ###
+config/credentials.yml

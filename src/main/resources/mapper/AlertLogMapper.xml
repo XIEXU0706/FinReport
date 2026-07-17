@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.finreport.module.alert.mapper.AlertLogMapper">
+
+    <select id="selectById" resultType="org.example.finreport.module.alert.entity.AlertLog">
+        SELECT * FROM alert_log WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultType="org.example.finreport.module.alert.entity.AlertLog">
+        SELECT * FROM alert_log
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO alert_log (rule_id, rule_name, metric, actual_value, threshold, severity, content, status, created_at)
+        VALUES (#{ruleId}, #{ruleName}, #{metric}, #{actualValue}, #{threshold}, #{severity}, #{content}, #{status}, NOW())
+    </insert>
+
+    <update id="updateById">
+        UPDATE alert_log
+        <set>
+            <if test="ruleId != null">rule_id = #{ruleId},</if>
+            <if test="ruleName != null">rule_name = #{ruleName},</if>
+            <if test="metric != null">metric = #{metric},</if>
+            <if test="actualValue != null">actual_value = #{actualValue},</if>
+            <if test="threshold != null">threshold = #{threshold},</if>
+            <if test="severity != null">severity = #{severity},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM alert_log WHERE id = #{id}
+    </delete>
+
+    <select id="selectPage" resultType="org.example.finreport.module.alert.entity.AlertLog">
+        SELECT * FROM alert_log
+        <where>
+            <if test="severity != null and severity != ''">AND severity = #{severity}</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM alert_log
+        <where>
+            <if test="severity != null and severity != ''">AND severity = #{severity}</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+    </select>
+
+    <select id="selectLatest" resultType="org.example.finreport.module.alert.entity.AlertLog">
+        SELECT * FROM alert_log ORDER BY id DESC LIMIT #{limit}
+    </select>
+
+    <select id="selectCountByStatus" resultType="long">
+        SELECT COUNT(*) FROM alert_log WHERE status = #{status}
+    </select>
+
+</mapper>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.finreport.module.system.mapper.SysRoleMapper">
+
+    <select id="selectById" resultType="org.example.finreport.module.system.entity.SysRole">
+        SELECT * FROM sys_role WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultType="org.example.finreport.module.system.entity.SysRole">
+        SELECT * FROM sys_role
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_role (role_name, role_code, description, sort_order, status, created_at)
+        VALUES (#{roleName}, #{roleCode}, #{description}, #{sortOrder}, #{status}, NOW())
+    </insert>
+
+    <update id="updateById">
+        UPDATE sys_role
+        <set>
+            <if test="roleName != null">role_name = #{roleName},</if>
+            <if test="roleCode != null">role_code = #{roleCode},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM sys_role WHERE id = #{id}
+    </delete>
+
+    <select id="selectPage" resultType="org.example.finreport.module.system.entity.SysRole">
+        SELECT * FROM sys_role ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM sys_role
+    </select>
+
+</mapper>

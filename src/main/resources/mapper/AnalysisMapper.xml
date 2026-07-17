@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.finreport.module.analysis.mapper.AnalysisMapper">
+
+    <!-- ==================== 交易分析 ==================== -->
+
+    <select id="selectTradeSummary" resultType="java.util.Map">
+        SELECT
+            COALESCE(SUM(amount), 0) AS totalAmount,
+            COUNT(*) AS totalCount,
+            COALESCE(ROUND(AVG(amount), 2), 0) AS avgAmount,
+            COALESCE(SUM(CASE WHEN trans_type = 'DEPOSIT' THEN amount END), 0) AS depositAmount,
+            COALESCE(SUM(CASE WHEN trans_type = 'WITHDRAW' THEN amount END), 0) AS withdrawAmount,
+            COALESCE(SUM(CASE WHEN trans_type = 'TRANSFER' THEN amount END), 0) AS transferAmount,
+            COALESCE(SUM(CASE WHEN trans_type = 'PAYMENT' THEN amount END), 0) AS paymentAmount,
+            (SELECT COALESCE(SUM(amount), 0)
+            FROM trans_log
+            WHERE trans_time >= DATE_SUB(CURDATE(), INTERVAL #{days}*2 DAY)
+              AND trans_time &lt; DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
+              AND status = 'SUCCESS') AS prevPeriodAmount
+        FROM trans_log
+        WHERE trans_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY) AND status = 'SUCCESS'
+    </select>
+
+    <select id="selectTradeDailyTrend" resultType="java.util.Map">
+        SELECT DATE_FORMAT(trans_time, '%Y-%m-%d') AS date,
+               COUNT(*) AS count,
+               COALESCE(SUM(amount), 0) AS amount,
+               COALESCE(ROUND(AVG(amount), 2), 0) AS avgAmount
+        FROM trans_log
+        WHERE trans_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY) AND status = 'SUCCESS'
+        GROUP BY DATE_FORMAT(trans_time, '%Y-%m-%d')
+        ORDER BY date
+    </select>
+
+    <select id="selectTradeChannelRatio" resultType="java.util.Map">
+        SELECT channel AS name,
+               COUNT(*) AS value,
+               COALESCE(SUM(amount), 0) AS amount,
+               ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 1) AS pct
+        FROM trans_log
+        WHERE trans_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY) AND status = 'SUCCESS'
+        GROUP BY channel
+        ORDER BY value DESC
+    </select>
+
+    <select id="selectTradeHourlyDist24h" resultType="java.util.Map">
+        SELECT HOUR(trans_time) AS hour,
+               COUNT(*) AS count,
+               COALESCE(SUM(amount), 0) AS amount
+        FROM trans_log
+        WHERE trans_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR) AND status = 'SUCCESS'
+        GROUP BY HOUR(trans_time)
+        ORDER BY MIN(trans_time)
+    </select>
+
+    <select id="selectLargeTrades" resultType="java.util.Map">
+        SELECT t.*, c.name AS customerName
+        FROM trans_log t
+        LEFT JOIN customer c ON t.customer_no = c.customer_no
+        WHERE t.amount >= #{minAmount}
+          AND t.trans_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
+          AND t.status = 'SUCCESS'
+        ORDER BY t.amount DESC
+        LIMIT 50
+    </select>
+
+    <select id="selectTradeTypeDist" resultType="java.util.Map">
+        SELECT trans_type AS name,
+               COUNT(*) AS count,
+               COALESCE(SUM(amount), 0) AS amount,
+               ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 1) AS pct
+        FROM trans_log
+        WHERE trans_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY) AND status = 'SUCCESS'
+        GROUP BY trans_type
+        ORDER BY count DESC
+    </select>
+
+
+
+    <!-- ==================== 客户分析 ==================== -->
+
+    <select id="selectCustomerSummary" resultType="java.util.Map">
+        SELECT
+            COUNT(*) AS totalCustomers,
+            SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) AS activeCustomers,
+            SUM(CASE WHEN customer_level IN ('PLATINUM') THEN 1 ELSE 0 END) AS vipCustomers,
+            ROUND(AVG(TIMESTAMPDIFF(YEAR, birth_date, CURDATE())), 0) AS avgAge,
+            COUNT(DISTINCT branch_id) AS branchCoverage
+        FROM customer
+    </select>
+
+    <select id="selectCustomerLevelDist" resultType="java.util.Map">
+        SELECT customer_level AS name, COUNT(*) AS value,
+               ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 1) AS pct
+        FROM customer
+        GROUP BY customer_level
+        ORDER BY value DESC
+    </select>
+
+    <select id="selectCustomerMonthlyGrowth" resultType="java.util.Map">
+        SELECT DATE_FORMAT(open_date, '%Y-%m') AS month, COUNT(*) AS newCustomers
+        FROM customer
+        WHERE open_date >= DATE_SUB(CURDATE(), INTERVAL #{months} MONTH)
+        GROUP BY DATE_FORMAT(open_date, '%Y-%m')
+        ORDER BY month
+    </select>
+
+    <select id="selectCustomerAgeDist" resultType="java.util.Map">
+        SELECT
+            CASE
+                WHEN TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) &lt; 25 THEN '25岁以下'
+                WHEN TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) BETWEEN 25 AND 34 THEN '25-34岁'
+                WHEN TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) BETWEEN 35 AND 44 THEN '35-44岁'
+                WHEN TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) BETWEEN 45 AND 54 THEN '45-54岁'
+                ELSE '55岁以上'
+            END AS ageGroup,
+            COUNT(*) AS count,
+            ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 1) AS pct
+        FROM customer
+        WHERE birth_date IS NOT NULL
+        GROUP BY ageGroup
+        ORDER BY MIN(TIMESTAMPDIFF(YEAR, birth_date, CURDATE()))
+    </select>
+
+    <select id="selectCustomerRegionDist" resultType="java.util.Map">
+        SELECT b.region AS name, COUNT(c.id) AS value,
+               ROUND(COUNT(c.id) * 100.0 / SUM(COUNT(c.id)) OVER(), 1) AS pct
+        FROM customer c
+        LEFT JOIN branch b ON c.branch_id = b.id
+        WHERE c.branch_id IS NOT NULL
+        GROUP BY b.region
+        ORDER BY value DESC
+    </select>
+
+    <!-- ==================== 贷款分析 ==================== -->
+    <select id="selectLoanSummary" resultType="java.util.Map">
+        SELECT
+            COUNT(*) AS totalLoans,
+            COALESCE(SUM(amount), 0) AS totalAmount,
+            COALESCE(SUM(CASE WHEN status IN ('NORMAL','OVERDUE') THEN maturity_total ELSE 0 END), 0) AS totalBalance,
+            SUM(CASE WHEN status = 'OVERDUE' THEN 1 ELSE 0 END) AS overdueCount,
+            COALESCE(SUM(CASE WHEN status = 'OVERDUE' THEN amount END), 0) AS overdueAmount,
+            COALESCE(ROUND(AVG(interest_rate), 2), 0) AS avgRate,
+            COALESCE(ROUND(AVG(term_months), 0), 0) AS avgTerm
+        FROM loan_record
+    </select>
+
+    <select id="selectLoanStatusDist" resultType="java.util.Map">
+        SELECT status AS name, COUNT(*) AS value,
+               COALESCE(SUM(amount), 0) AS amount,
+               ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 1) AS pct
+        FROM loan_record
+        GROUP BY status
+        ORDER BY value DESC
+    </select>
+
+    <select id="selectLoanMonthlyTrend" resultType="java.util.Map">
+        SELECT DATE_FORMAT(loan_date, '%Y-%m') AS month,
+               COUNT(*) AS count,
+               COALESCE(SUM(amount), 0) AS amount
+        FROM loan_record
+        WHERE loan_date >= DATE_SUB(CURDATE(), INTERVAL #{months} MONTH)
+        GROUP BY DATE_FORMAT(loan_date, '%Y-%m')
+        ORDER BY month
+    </select>
+
+    <select id="selectLoanTermDist" resultType="java.util.Map">
+        SELECT CONCAT(term_months, '个月') AS term,
+               COUNT(*) AS count,
+               COALESCE(SUM(amount), 0) AS amount,
+               ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 1) AS pct
+        FROM loan_record
+        GROUP BY term_months
+        ORDER BY term_months
+    </select>
+
+    <select id="selectLoanOverdueAnalysis" resultType="java.util.Map">
+        SELECT DATE_FORMAT(loan_date, '%Y-%m') AS month,
+               COUNT(*) AS totalCount,
+               COALESCE(SUM(CASE WHEN status = 'OVERDUE' THEN maturity_total END), 0) AS overdueAmount,
+               COALESCE(SUM(amount), 0) AS totalAmount,
+               ROUND(SUM(CASE WHEN status = 'OVERDUE' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0), 2) AS overdueRate
+        FROM loan_record
+        WHERE loan_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+        GROUP BY DATE_FORMAT(loan_date, '%Y-%m')
+        ORDER BY month
+    </select>
+
+    <!-- ==================== 产品分析 ==================== -->
+    <select id="selectProductSalesRank" resultType="java.util.Map">
+        SELECT p.product_name AS name, p.product_type AS type,
+               COALESCE(SUM(ps.amount), 0) AS saleAmount,
+               COUNT(ps.id) AS saleCount,
+               DENSE_RANK() OVER(ORDER BY COALESCE(SUM(ps.amount), 0) DESC) AS rnk
+        FROM product p
+        LEFT JOIN prod_sale ps ON p.product_code = ps.product_no
+        GROUP BY p.id, p.product_name, p.product_type
+        ORDER BY saleAmount DESC
+    </select>
+
+    <select id="selectProductTypeDist" resultType="java.util.Map">
+        SELECT p.product_type AS name,
+               COUNT(DISTINCT p.id) AS productCount,
+               COALESCE(SUM(ps.amount), 0) AS saleAmount,
+               COUNT(ps.id) AS saleCount,
+               ROUND(COALESCE(SUM(ps.amount), 0) * 100.0 / NULLIF(SUM(SUM(ps.amount)) OVER(), 0), 1) AS pct
+        FROM product p
+        LEFT JOIN prod_sale ps ON p.product_code = ps.product_no
+        GROUP BY p.product_type
+        ORDER BY saleAmount DESC
+    </select>
+
+    <select id="selectProductReturnRank" resultType="java.util.Map">
+        SELECT product_name AS name, expected_return AS returnRate,
+               product_type, risk_level,
+               RANK() OVER(ORDER BY expected_return DESC) AS rnk
+        FROM product
+        WHERE status = 'SELLING'
+        ORDER BY expected_return DESC
+    </select>
+
+</mapper>
