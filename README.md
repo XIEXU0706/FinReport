@@ -277,7 +277,7 @@ npm install
 npm run serve
 ```
 
-访问 http://localhost:8087，默认账号 admin / 123456
+访问 http://localhost:8083，默认账号 admin / 123456
 
 ### 5. 启动 AI 服务（可选）
 
